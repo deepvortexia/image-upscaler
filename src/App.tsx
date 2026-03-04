@@ -116,6 +116,37 @@ function AppContent() {
     if (file) handleFileSelect(file)
   }
 
+  const resizeImageIfNeeded = (file: File): Promise<{ base64: string; mimeType: string; wasResized: boolean }> => {
+    const MAX_PIXELS = 2_000_000
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      const objectUrl = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl)
+        const { naturalWidth: w, naturalHeight: h } = img
+        if (w * h <= MAX_PIXELS) {
+          const reader = new FileReader()
+          reader.onload = () => resolve({ base64: (reader.result as string).split(',')[1], mimeType: file.type, wasResized: false })
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+          return
+        }
+        const ratio = Math.sqrt(MAX_PIXELS / (w * h))
+        const newW = Math.floor(w * ratio)
+        const newH = Math.floor(h * ratio)
+        const canvas = document.createElement('canvas')
+        canvas.width = newW
+        canvas.height = newH
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, newW, newH)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+        resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg', wasResized: true })
+      }
+      img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Failed to load image')) }
+      img.src = objectUrl
+    })
+  }
+
   const upscaleImage = async () => {
     if (!uploadedFile) { setError('Please upload an image first.'); return }
     if (!user) { setError('Please sign in to upscale images'); setIsAuthModalOpen(true); return }
@@ -126,12 +157,10 @@ function AppContent() {
     setToast(null)
 
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve((reader.result as string).split(',')[1])
-        reader.onerror = reject
-        reader.readAsDataURL(uploadedFile)
-      })
+      const { base64, mimeType: resolvedMimeType, wasResized } = await resizeImageIfNeeded(uploadedFile)
+      if (wasResized) {
+        setToast({ title: 'Image resized for processing', message: 'Your image exceeded the size limit and was automatically resized before upload.', type: 'warning' })
+      }
 
       const token = session?.access_token
       const controller = new AbortController()
@@ -142,7 +171,7 @@ function AppContent() {
         response = await fetch('/api/upscale', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ imageBase64: base64, mimeType: uploadedFile.type, scale }),
+          body: JSON.stringify({ imageBase64: base64, mimeType: resolvedMimeType, scale }),
           signal: controller.signal,
         })
       } catch (fetchErr: any) {
