@@ -33,6 +33,7 @@ function AppContent() {
   const [favRefreshKey, setFavRefreshKey] = useState(0)
   const [favSaving, setFavSaving] = useState(false)
   const [favSaved, setFavSaved] = useState(false)
+  const [downloading, setDownloading] = useState(false)
 
   const { user, session, loading } = useAuth()
   const { hasCredits, refreshProfile } = useCredits()
@@ -218,9 +219,11 @@ function AppContent() {
   }
 
   const downloadResult = async () => {
-    if (!resultImage) return
+    if (!resultImage || downloading) return
+    setDownloading(true)
     try {
       const response = await fetch(resultImage)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -231,7 +234,9 @@ function AppContent() {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
     } catch {
-      alert('Failed to download image. Please try right-clicking and "Save Image As..."')
+      setToast({ title: 'Download failed', message: 'Could not download image. Try right-clicking and "Save Image As...".', type: 'error' })
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -346,7 +351,7 @@ function AppContent() {
               </div>
             </div>
             <div className="action-buttons">
-              <button onClick={downloadResult} className="action-btn download-btn"><span>📥</span> Download PNG</button>
+              <button onClick={downloadResult} className="action-btn download-btn" disabled={downloading}><span>📥</span> {downloading ? 'Downloading...' : 'Download PNG'}</button>
               <button onClick={saveFavorite} className="action-btn save-btn" disabled={favSaving || favSaved}>
                 <span>⭐</span> {favSaved ? 'Added!' : favSaving ? 'Saving...' : 'Add to Favorites'}
               </button>
