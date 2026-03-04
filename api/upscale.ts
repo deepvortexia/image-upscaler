@@ -148,38 +148,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       throw new Error('No image returned from model')
     }
 
-    // Upload to Supabase Storage for a permanent URL
-    let imageUrl: string = outputUrl
-    try {
-      const imgRes = await fetch(outputUrl)
-      if (imgRes.ok) {
-        const imgBuffer = await imgRes.arrayBuffer()
-        const fileName = `${userId}/${Date.now()}-upscaled.png`
-        const { error: uploadError } = await supabase.storage
-          .from('generated-images')
-          .upload(fileName, imgBuffer, { contentType: 'image/png', upsert: false })
-        if (!uploadError) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('generated-images')
-            .getPublicUrl(fileName)
-          if (publicUrl) {
-            imageUrl = publicUrl
-            console.log('[upscale] Uploaded to Supabase Storage:', imageUrl)
-          }
-        } else {
-          console.error('[upscale] Storage upload failed, using Replicate URL:', uploadError)
-        }
-      }
-    } catch (storageErr) {
-      console.error('[upscale] Storage error, using Replicate URL:', storageErr)
+    // Fetch from Replicate and upload to Supabase Storage for a stable public URL
+    const imgRes = await fetch(outputUrl)
+    if (!imgRes.ok) {
+      generationFailed = true
+      throw new Error(`Failed to fetch upscaled image: ${imgRes.status}`)
     }
+    const imgBuffer = await imgRes.arrayBuffer()
+    const fileName = `${userId}/${Date.now()}-upscaled.png`
+    const { error: uploadError } = await supabase.storage
+      .from('generated-images')
+      .upload(fileName, imgBuffer, { contentType: 'image/png', upsert: false })
+    if (uploadError) {
+      generationFailed = true
+      throw new Error(`Storage upload failed: ${uploadError.message}`)
+    }
+    const { data: { publicUrl } } = supabase.storage
+      .from('generated-images')
+      .getPublicUrl(fileName)
+    console.log('[upscale] Uploaded to Supabase Storage:', publicUrl)
 
     // Log transaction
     void supabase
       .from('generation_logs')
       .insert({ user_id: userId, tool: 'image-upscaler', created_at: new Date().toISOString() })
 
-    return res.status(200).json({ image: imageUrl })
+    return res.status(200).json({ image: publicUrl })
   } catch (error: any) {
     console.error('[upscale] Error:', error?.message)
 
