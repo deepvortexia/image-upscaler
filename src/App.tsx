@@ -247,27 +247,21 @@ function AppContent() {
     }
   }
 
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-
   const downloadResult = async () => {
     if (!resultImage || downloading) return
     setDownloading(true)
     try {
-      if (isMobile) {
-        window.open(resultImage, '_blank')
-      } else {
-        const response = await fetch(resultImage)
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `upscaled-${scale}x-${Date.now()}.png`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-      }
+      const response = await fetch(resultImage)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `upscaled-${scale}x-${Date.now()}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
     } catch {
       setToast({ title: 'Download failed', message: 'Could not download image. Try right-clicking and "Save Image As...".', type: 'error' })
     } finally {
@@ -387,7 +381,6 @@ function AppContent() {
             </div>
             <div className="action-buttons">
               <button onClick={downloadResult} className="action-btn download-btn" disabled={downloading}><span>📥</span> {downloading ? 'Downloading...' : 'Download PNG'}</button>
-              {isMobile && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted, #888)', margin: '-0.5rem 0 0.5rem', textAlign: 'center' }}>Mobile: image will open in new tab, long-press to save</p>}
               <button onClick={saveFavorite} className="action-btn save-btn" disabled={favSaving || favSaved}>
                 <span>⭐</span> {favSaved ? 'Added!' : favSaving ? 'Saving...' : 'Add to Favorites'}
               </button>

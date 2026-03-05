@@ -65,13 +65,13 @@ export function FavoritesModal({ isOpen, onClose }: FavoritesModalProps) {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `bg-removed-${id.slice(0, 8)}.png`
+      link.download = `upscaled-${id.slice(0, 8)}.png`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
     } catch {
-      window.open(resultUrl, '_blank')
+      alert('Download failed. Please try right-clicking and "Save Image As..."')
     }
   }
 
