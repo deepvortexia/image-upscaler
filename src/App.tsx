@@ -250,18 +250,29 @@ function AppContent() {
   const downloadResult = async () => {
     if (!resultImage || downloading) return
     setDownloading(true)
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
     try {
       const response = await fetch(resultImage)
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `upscaled-${scale}x-${Date.now()}.png`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
+      if (isMobile) {
+        const filename = `upscaled-${scale}x-${Date.now()}.png`
+        const file = new File([blob], filename, { type: blob.type })
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file] })
+        } else {
+          window.open(resultImage, '_blank')
+        }
+      } else {
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `upscaled-${scale}x-${Date.now()}.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      }
     } catch {
       setToast({ title: 'Download failed', message: 'Could not download image. Try right-clicking and "Save Image As...".', type: 'error' })
     } finally {
