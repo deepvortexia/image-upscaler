@@ -1,5 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
+import sharp from 'sharp'
+
+const MAX_INPUT_PX = 1200
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -83,7 +86,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let generationFailed = false
 
   try {
-    const imageDataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`
+    // Resize input to max 1200px on longest side to prevent CUDA OOM on Replicate GPU
+    const inputBuffer = Buffer.from(imageBase64, 'base64')
+    const image = sharp(inputBuffer)
+    const metadata = await image.metadata()
+    const { width = 0, height = 0 } = metadata
+    let resizedBuffer: Buffer
+    if (width > MAX_INPUT_PX || height > MAX_INPUT_PX) {
+      console.log(`[upscale] Resizing from ${width}x${height} to max ${MAX_INPUT_PX}px`)
+      resizedBuffer = await image
+        .resize(MAX_INPUT_PX, MAX_INPUT_PX, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 92 })
+        .toBuffer()
+    } else {
+      resizedBuffer = inputBuffer
+    }
+    const resizedBase64 = resizedBuffer.toString('base64')
+    const resizedMime = (width > MAX_INPUT_PX || height > MAX_INPUT_PX) ? 'image/jpeg' : (mimeType || 'image/jpeg')
+    const imageDataUrl = `data:${resizedMime};base64,${resizedBase64}`
     const scaleValue = Number(scale) || 4
 
     const response = await fetch('https://api.replicate.com/v1/predictions', {
@@ -138,7 +158,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (result.status === 'failed') {
       generationFailed = true
-      throw new Error(result.error || 'Image upscaling failed')
+      const errMsg: string = result.error || 'Image upscaling failed'
+      if (errMsg.toLowerCase().includes('cuda') || errMsg.toLowerCase().includes('out of memory') || errMsg.toLowerCase().includes('oom')) {
+        throw new Error('The image is too large to process. Please try a smaller image (under 1200px).')
+      }
+      throw new Error(errMsg)
     }
 
     const outputUrl = Array.isArray(result.output) ? result.output[0] : result.output

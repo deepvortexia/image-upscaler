@@ -9,9 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "@types/sharp": "^0.31.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@supabase/supabase-js": "^2.39.0",
+    "sharp": "^0.34.5",
     "stripe": "^14.12.0"
   },
   "devDependencies": {
