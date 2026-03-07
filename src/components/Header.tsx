@@ -86,7 +86,7 @@ export default function Header() {
           />
         </div>
 
-        <h1 className="brand-title-text">DΞΞP VORTΞX AI</h1>
+        <h1 className="brand-title-text">AI Image Upscaler</h1>
         <p className="primary-tagline">🔍 Upscale your images up to 4x with AI</p>
 
         <div className="hub-pills-container">
