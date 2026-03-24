@@ -1,6 +1,11 @@
 {
-  "name": "MyWebSite",
-  "short_name": "MySite",
+  "name": "Deep Vortex AI Image Upscaler",
+  "short_name": "DV Upscaler",
+  "description": "Upscale your images up to 4x with AI. Enhance quality and resolution instantly.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#D4AF37",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
@@ -14,8 +19,5 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ],
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
-  "display": "standalone"
+  ]
 }
