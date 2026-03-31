@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+
 const otherTools = [
   { name: "Image Generator", desc: "AI artwork from text", url: "https://images.deepvortexai.com", icon: "🖼️" },
   { name: "Avatar Generator", desc: "AI portrait styles", url: "https://avatar.deepvortexai.com", icon: "🎭" },
@@ -11,6 +13,13 @@ const otherTools = [
 ]
 
 export function HowToUsePage() {
+  useEffect(() => {
+    document.title = "How to Use the AI Image Upscaler | Deep Vortex AI";
+    const desc = document.querySelector('meta[name="description"]');
+    if (desc) desc.setAttribute('content', 'Step-by-step guide to upscaling images with Deep Vortex AI. Upload your image, choose 2x or 4x, and download in seconds.');
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.setAttribute('href', 'https://upscaler.deepvortexai.com/how-to-use');
+  }, []);
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', backgroundImage: 'radial-gradient(rgba(212,175,55,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' }}>
 
